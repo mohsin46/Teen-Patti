@@ -116,5 +116,5 @@ app.get('/', (req, res) => {
     res.send('Hello world');
   })
 
-  server.listen(port, () => f`Server is running on port ${port}`);
+server.listen(port, () => `Server is running on port ${port}`);
 
