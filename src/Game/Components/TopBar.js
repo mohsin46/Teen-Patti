@@ -10,7 +10,7 @@ import axios from 'axios';
 const TopBar = ({name, roomId, socket, sideShowRequest, getMembers, setShowRedirectHome, numRequestWaiting, hasGameStarted, isRoomLead, setShowOptionMenu, playerAway, setPlayerAway, setPlayerLeft}) => {
 
     const handlePlayerAway = () => {
-        axios.put("http://localhost:8000/playerAway", "", {
+        axios.put("http://teenpatti321.herokuapp.com/playerAway", "", {
             params: {
                 name,
                 roomId
@@ -21,7 +21,7 @@ const TopBar = ({name, roomId, socket, sideShowRequest, getMembers, setShowRedir
     }
 
     const handlePlayerBack = () => {
-        axios.put("http://localhost:8000/playerBack", "", {
+        axios.put("http://teenpatti321.herokuapp.com/playerBack", "", {
             params: {
                 name,
                 roomId
@@ -32,7 +32,7 @@ const TopBar = ({name, roomId, socket, sideShowRequest, getMembers, setShowRedir
     }
 
     const handlePlayerLeft = () => {
-        axios.put("http://localhost:8000/playerExit", "", {
+        axios.put("http://teenpatti321.herokuapp.com/playerExit", "", {
             params: {
                 name,
                 roomId
