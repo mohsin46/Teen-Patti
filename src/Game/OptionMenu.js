@@ -11,7 +11,7 @@ const OptionMenu = ({setShowOptionMenu, playerSeat, sideShowRequest, seatRequest
     const [stack, setStack] = useState(0)
 
     const denySeat = (name => {
-        axios.put("http://teenpatti321.herokuapp.com/allowPlayer", "", {
+        axios.put("https://teenpatti321.herokuapp.com/allowPlayer", "", {
             params: {
                 name,
                 stack:0,
@@ -33,7 +33,7 @@ const OptionMenu = ({setShowOptionMenu, playerSeat, sideShowRequest, seatRequest
     })
 
     const approveSeat = () => {
-        axios.put("http://teenpatti321.herokuapp.com/allowPlayer", "", {
+        axios.put("https://teenpatti321.herokuapp.com/allowPlayer", "", {
             params: {
                 name: approvePlayerData.name,
                 stack: stack,
@@ -43,7 +43,7 @@ const OptionMenu = ({setShowOptionMenu, playerSeat, sideShowRequest, seatRequest
             }
         }).then(res => {
             console.log(res);
-            axios.put("http://teenpatti321.herokuapp.com/assignSeat", "", {
+            axios.put("https://teenpatti321.herokuapp.com/assignSeat", "", {
                 params: {
                     name: approvePlayerData.name,
                     seatnum: approvePlayerData.seatNum,

@@ -10,7 +10,7 @@ const StartGameBtn = ({roomId, setHasGameStarted, socket, roundDetails, getRound
     const startGame = () => {
         console.log(roundDetails, {}, roundDetails == {}, roundDetails === {});
         if(roundDetails.roundStarted == "Yes"){
-            axios.put("http://teenpatti321.herokuapp.com/refreshRound", "", {
+            axios.put("https://teenpatti321.herokuapp.com/refreshRound", "", {
                 params: {
                     roomId
                 }
@@ -29,7 +29,7 @@ const StartGameBtn = ({roomId, setHasGameStarted, socket, roundDetails, getRound
         }
         else {
             
-            axios.post("http://teenpatti321.herokuapp.com/startFirstRound", "", {
+            axios.post("https://teenpatti321.herokuapp.com/startFirstRound", "", {
                 params: {
                     roomId
                 }

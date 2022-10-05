@@ -67,7 +67,7 @@ const Game = ({socket}) => {
     console.log(numRequestWaiting);
     const setRoomLeader = (user_name) => {
         console.log("room id", roomId, user_name);
-        axios.get("http://teenpatti321.herokuapp.com/isRoomLead", {
+        axios.get("https://teenpatti321.herokuapp.com/isRoomLead", {
             params: {
                 name: user_name,
                 roomId
@@ -291,7 +291,7 @@ const Game = ({socket}) => {
     }, [players])
 
     const getRoundDetails = (text) => {
-        axios.get("http://teenpatti321.herokuapp.com/getRoundInfo", {
+        axios.get("https://teenpatti321.herokuapp.com/getRoundInfo", {
             params: {roomId}
         }).then(res => {
             
@@ -314,7 +314,7 @@ const Game = ({socket}) => {
 
     const getMembers = async () => {
         try {
-            let res = await axios.get("http://teenpatti321.herokuapp.com/getMembers", {
+            let res = await axios.get("https://teenpatti321.herokuapp.com/getMembers", {
                 params: {roomId}
             })
             console.log("members",res.data);
@@ -335,7 +335,7 @@ const Game = ({socket}) => {
     // }, [name])
 
     const updateRequestList = () => {
-        axios.get("http://teenpatti321.herokuapp.com/checkQueue", {
+        axios.get("https://teenpatti321.herokuapp.com/checkQueue", {
             params: {roomId}
         })
         .then(res => {
@@ -356,7 +356,7 @@ const Game = ({socket}) => {
     }
 
     const createMember = () => {
-        axios.post("http://teenpatti321.herokuapp.com/createMember", "", {
+        axios.post("https://teenpatti321.herokuapp.com/createMember", "", {
             params: {
                 name,
                 stack,
@@ -381,7 +381,7 @@ const Game = ({socket}) => {
         
         setSeatWating(true)
 
-        axios.post("http://teenpatti321.herokuapp.com/requestSeat", "", {
+        axios.post("https://teenpatti321.herokuapp.com/requestSeat", "", {
             params: {
                 name,
                 seatNum,
@@ -430,7 +430,7 @@ const Game = ({socket}) => {
     const handleMove = (move, amount=0) => {
         setIsPlayerTurn(false)
         
-        axios.post("http://teenpatti321.herokuapp.com/updateMove", "", {
+        axios.post("https://teenpatti321.herokuapp.com/updateMove", "", {
             params: {
                 roomId,
                 name,
@@ -463,7 +463,7 @@ const Game = ({socket}) => {
     }
 
     const cancelSeat = (() => {
-        axios.put("http://teenpatti321.herokuapp.com/allowPlayer", "", {
+        axios.put("https://teenpatti321.herokuapp.com/allowPlayer", "", {
             params: {
                 name,
                 stack:0,
@@ -506,7 +506,7 @@ const Game = ({socket}) => {
     // console.log(numRequestWaiting, isRoomLead);
 
     const approveSideShow = () => {
-        axios.post("http://teenpatti321.herokuapp.com/updateMove", "", {
+        axios.post("https://teenpatti321.herokuapp.com/updateMove", "", {
             params: {
                 roomId,
                 name: sideShowRequest.name,
@@ -550,7 +550,7 @@ const Game = ({socket}) => {
         setShowSideShowRequestSentPopup(false)
         setIsReqPlayer(false)
 
-        axios.post("http://teenpatti321.herokuapp.com/updateMove", "", {
+        axios.post("https://teenpatti321.herokuapp.com/updateMove", "", {
             params: {
                 roomId,
                 name:sideShowRequest.reqPlayerName,
