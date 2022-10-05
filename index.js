@@ -5,6 +5,7 @@ const app = express();
 http = require('http');
 const cors = require('cors');
 const { Server } = require('socket.io'); // Add this
+const port = process.env.PORT || 4000
 
 app.use(cors()); // Add cors middleware
 
@@ -115,4 +116,5 @@ app.get('/', (req, res) => {
     res.send('Hello world');
   })
 
-server.listen(4000, () => 'Server is running on port 4000');
+  server.listen(port, () => f`Server is running on port ${port}`);
+
