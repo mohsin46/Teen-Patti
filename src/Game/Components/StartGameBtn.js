@@ -1,13 +1,15 @@
 import axios from 'axios';
 import React from 'react';
+
 import { useCookies } from 'react-cookie';
 
-const StartGameBtn = ({roomId, setHasGameStarted, socket, roundDetails, getRoundDetails, setFullShow}) => {
+
+const StartGameBtn = ({roomId, setHasGameStarted, setShowLoader, socket, roundDetails,setPlayerTimeout, getRoundDetails, setFullShow}) => {
 
     const [cookies, setCookie, removeCookie] = useCookies(['user']);
 
-
     const startGame = () => {
+        setShowLoader(true)
         console.log(roundDetails, {}, roundDetails == {}, roundDetails === {});
         if(roundDetails.roundStarted == "Yes"){
             axios.put("http://localhost:8000/refreshRound", "", {
@@ -20,15 +22,15 @@ const StartGameBtn = ({roomId, setHasGameStarted, socket, roundDetails, getRound
                 setHasGameStarted(true)
                 getRoundDetails("called from refresh start btn")
                 setCookie("hasGameStarted", true, { path: '/' })
+                setPlayerTimeout(false)
                 console.log("game has refreshed");
                 socket.emit("game_started", {
                     roomId
                 })
-                
+                setShowLoader(false)
             }).catch(e => console.log(e))
         }
         else {
-            
             axios.post("http://localhost:8000/startFirstRound", "", {
                 params: {
                     roomId
@@ -43,6 +45,7 @@ const StartGameBtn = ({roomId, setHasGameStarted, socket, roundDetails, getRound
                 socket.emit("game_started", {
                     roomId
                 })
+                setShowLoader(false)
                 
             }).catch(e => console.log(e))
         }
@@ -52,7 +55,7 @@ const StartGameBtn = ({roomId, setHasGameStarted, socket, roundDetails, getRound
     return (
         <div 
         onClick={e => startGame()}
-        className='text-sm w-fit ml-auto mr-2 mt-2 p-2 rounded-md bg-[#3EA76D] text-white' >
+        className='text-sm cursor-pointer md:text-base w-fit ml-auto mr-2 mt-2 p-2 md:p-4 rounded-md bg-[#3EA76D] text-white' >
             Start Game
         </div>
     );

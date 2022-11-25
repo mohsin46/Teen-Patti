@@ -17,7 +17,7 @@ const RaiseAmountSlider = ({stack, bet, setShowRaiseSlider, handleMove, hasGameS
 
 
     return (
-        <div className='w-full relative pl-2'>
+        <div className='w-full relative md:absolute md:bottom-8 pl-2'>
             <div className='absolute py-2 px-6 rounded-lg -top-16 left-2 text-[#F2F2F2] bg-[#333232]' >
                 <p className='text-sm' >Amount</p>
                 <p className='text-2xl font-bold text-center'>{value}</p>
@@ -41,7 +41,7 @@ const RaiseAmountSlider = ({stack, bet, setShowRaiseSlider, handleMove, hasGameS
                     <div id="raise-amount-pos"></div>
                 </div>
 
-                <div className='absolute right-2 w-5/12 flex justify-end' >
+                <div className='absolute right-2 md:right-8 w-5/12 flex justify-end' >
                     <button 
                     onClick={
                         e => {
@@ -50,12 +50,12 @@ const RaiseAmountSlider = ({stack, bet, setShowRaiseSlider, handleMove, hasGameS
                                 setShowRaiseSlider(false)
                             }
                         }
-                    className='border-2 border-[#F2F2F2] text-[#F2F2F2] rounded-md p-2 font-bold mr-2' >
+                    className='border-2 border-[#F2F2F2] text-[#F2F2F2] rounded-md p-2 md:p-4 font-bold mr-2 md:mr-8' >
                         Raise
                     </button>
                     <button 
                     onClick={e => setShowRaiseSlider(false)}
-                    className='border-2 border-[#F2F2F2] text-[#F2F2F2] rounded-md p-2 font-bold'>
+                    className='border-2 border-[#F2F2F2] text-[#F2F2F2] rounded-md p-2 md:p-4 font-bold'>
                         Back
                     </button>
                 </div>

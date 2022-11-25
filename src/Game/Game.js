@@ -15,6 +15,7 @@ import Cards from './Components/Cards';
 import useWindowDimensions  from "../helper/windowDimensions"
 import TopBar from './Components/TopBar';
 import PopupMessage from './Components/PopupMessage';
+import ReactLoading from "react-loading"
 
 const Game = ({socket}) => {
 
@@ -52,8 +53,16 @@ const Game = ({socket}) => {
     const [isReqPlayer, setIsReqPlayer] = useState(false)
     const [reqPlayerName, setReqPlayerName] = useState("-")
     const [sideShowResult, setSideShowResult] = useState("")
-    const [ showSideShowResult, setShowSideShowResult] = useState(false)
-    
+    const [showSideShowResult, setShowSideShowResult] = useState(false)
+    const [playerTimeout, setPlayerTimeout] = useState(false)
+    const [timeRemaining, setTimeRemaining] = useState(30)
+    const [otherTimeRemaining, setOtherTimeRemaining] = useState(30)
+    const [timerId, setTimerId] = useState(0)
+    const [otherTimerId, setOtherTimerId] = useState(0)
+    const [showLoader, setShowLoader] = useState(false)
+    const [currentPlayerSeatNum, setCurrentPlayerSeatNum] = useState(-1)
+    const [currentPlayerName, setCurrentPlayerName] = useState('')
+
 
     let location = useLocation()
     const [name, setName] = useState("")
@@ -62,11 +71,7 @@ const Game = ({socket}) => {
 
     const roomId = location.pathname.split("/")[2]
 
-    console.log(isReqPlayer, showSideShowRequestSentPopup );
-
-    console.log(numRequestWaiting);
     const setRoomLeader = (user_name) => {
-        console.log("room id", roomId, user_name);
         axios.get("http://localhost:8000/isRoomLead", {
             params: {
                 name: user_name,
@@ -111,12 +116,10 @@ const Game = ({socket}) => {
                 var seat = Object.keys(players).find(key => players[key] === name)
                 if (!(seat === undefined)){
                     setPlayerSeat(seat)
-                    console.log("set seat", seat);
                 }
                 console.log("game start", cookies.hasGameStarted);
                 if(cookies.hasGameStarted === "true"){
                     setHasGameStarted(true)
-                    console.log("called from useeffect int");
 
                     getRoundDetails("called from useeffect")
                 }
@@ -139,12 +142,9 @@ const Game = ({socket}) => {
                 var seat = Object.keys(players).find(key => players[key] === name)
                 if (!(seat === undefined)){
                     setPlayerSeat(seat)
-                    console.log("set seat", seat);
                 }
-                console.log("game start", cookies.hasGameStarted);
                 if(cookies.hasGameStarted === "true"){
                     setHasGameStarted(true)
-                    console.log("called from useeffect int");
 
                     getRoundDetails("called from useeffect")
                 }
@@ -185,7 +185,6 @@ const Game = ({socket}) => {
 
         socket.on("player_seat_denied", (data) => {
             console.log(data.name, "has been denied");
-            console.log(name, "this is");
             setSeatDeniedPlayer(data.name)
         })
     
@@ -212,7 +211,8 @@ const Game = ({socket}) => {
         socket.on("player_update_move", (data) => {
             console.log("called from update move");
             // setReloadRoundInfo(val => !val)
-            if(data.message.includes("win")){
+            if(data.message && data.message.includes("win")){
+                handleClearInterval()
                 setPlayerWonMessage(data.message)
                 setShowPlayerWonPopup(true)
                 setTimeout(() => {
@@ -240,13 +240,14 @@ const Game = ({socket}) => {
             setSideShowRequest(true)
             setTimeout(() => {
                 setSideShowRequest(false)
-            })
+            }, 3000)
 
         })
 
-        // socket.on("player_full_show", (data) => {
-        //     setFullShow(true)
-        // })
+        socket.on("player_start_timer", (data) => {
+            console.log("player timer started", data.name);
+            setCurrentPlayerName(data.name)
+        })
 
     }, [])
 
@@ -266,15 +267,14 @@ const Game = ({socket}) => {
         setTimeout(() => {
             setShowSideShowRequestSentPopup(false)
         }, 3000);
-
-        
-
-        // if(data.reqPlayer == playerSeat){
-        //     console.log("side show request received from", data.name);
-        //     setIsReqPlayer(true)
-        //     // setNumRequestWaiting(numRequestWaiting+1)
-        // }
     }
+
+    // useEffect(() => {
+    //     if(currentPlayerSeatNum == playerSeat){
+    //         setIsPlayerTurn(true)
+    //         console.log(name, "turn");
+    //     }
+    // }, [currentPlayerSeatNum])
 
     useEffect(() => {
         console.log("name", name, "req player name", reqPlayerName);
@@ -299,6 +299,7 @@ const Game = ({socket}) => {
             setRoundDetails(res.data)
             if(res.data !== {}){
                 if(res.data.player_won !== ""){
+                    handleClearInterval(timerId)
                     setPlayerWon(res.data.player_won)
                 }
                 res.data.currentPlayerNames.forEach((p,i) => {
@@ -311,6 +312,18 @@ const Game = ({socket}) => {
             
         }).catch(err => console.log(err))
     }
+
+    const startOtherPlayerTimer = () => {
+        setOtherTimerId(setInterval( () => {
+            setOtherTimeRemaining((prev) => prev - 1)
+        }, 1000))
+    } 
+
+    useEffect(() => {
+        if (name !== currentPlayerName){
+            startOtherPlayerTimer()
+        }
+    }, currentPlayerName)
 
     const getMembers = async () => {
         try {
@@ -329,10 +342,6 @@ const Game = ({socket}) => {
         }
     }
 
-    console.log(players.length, players);
-
-    // useEffect(() => {
-    // }, [name])
 
     const updateRequestList = () => {
         axios.get("http://localhost:8000/checkQueue", {
@@ -407,14 +416,34 @@ const Game = ({socket}) => {
 
     const findPlayerTurn = () => {
         if(roundDetails.current_player_seatnum == playerSeat){
-            setIsPlayerTurn(true)
-            console.log(name, playerSeat,roundDetails.current_player_seatnum, "is player turn set ", true);
+            if (hasGameStarted){
+                setIsPlayerTurn(true)
+                if(timerId == 0){
+                    setTimerId(setInterval( () => {
+                        setTimeRemaining((prev) => prev - 1)
+                    }, 1000))
+
+                    socket.emit("start_timer", {
+                        roomId,
+                        playerSeat,
+                        name 
+                    })
+                }
+            }
         }
         else{
             setIsPlayerTurn(false)
-            console.log(name, playerSeat,roundDetails.current_player_seatnum, "is player turn set ", false);
         }
     }
+
+    useEffect(() => {
+        if(timeRemaining == 0 ){
+            console.log(name, "timeout complete", new Date());
+            setPlayerTimeout(true)
+            handleClearInterval(timerId)
+            handleMove("Pack")
+        }
+    }, [timeRemaining])
 
     useEffect(() => {
         findPlayerTurn()
@@ -427,8 +456,18 @@ const Game = ({socket}) => {
 
     }, [seatDeniedPlayer])
 
+    const handleClearInterval = () => {
+        clearInterval(timerId)
+        setTimerId(0)
+        setTimeRemaining(30)
+    }
+
     const handleMove = (move, amount=0) => {
         setIsPlayerTurn(false)
+
+        if(move !== "SeeCards"){
+            handleClearInterval()
+        }
         
         axios.post("http://localhost:8000/updateMove", "", {
             params: {
@@ -446,6 +485,7 @@ const Game = ({socket}) => {
                 setFullShow(true)
             }   
             if (res.data.Message.includes("win")){
+                handleClearInterval()
                 setPlayerWonMessage(res.data.Message)
                 setShowPlayerWonPopup(true)
                 setTimeout(() => {
@@ -576,17 +616,17 @@ const Game = ({socket}) => {
 
     if (!showOptionMenu) {
         return (
-            <div className='bg-[#212120] relative h-screen max-h-screen' >
-                <div className='absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 w-full max-w-[520px] md:max-w-[890px] md:h-full  bg-bg bg-no-repeat bg-cover' >
+            <div className='bg-[#212120] relative h-screen max-h-screen overflow-hidden ' >
+                <div className='absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 w-full max-w-[520px] md:max-w-[890px] lg:max-w-[85%] md:h-full bg-bg bg-no-repeat bg-cover shadow-[0_0_30px_0px_rgba(0,0,0,0.8)]' >
                 
                 <div className="h-full w-full p-2 relative py-4" >
                     <div className='h-full' >
-                        <TopBar name={name} roomId={roomId} sideShowRequest={sideShowRequest} setShowRedirectHome={setShowRedirectHome} getMembers={getMembers}  socket={socket} numRequestWaiting={numRequestWaiting} hasGameStarted={hasGameStarted} isRoomLead={isRoomLead} setShowOptionMenu={setShowOptionMenu} playerAway={playerAway} setPlayerAway={setPlayerAway} setPlayerLeft={setPlayerLeft} />
+                        <TopBar name={name} roomId={roomId} handleClearInterval={handleClearInterval} sideShowRequest={sideShowRequest} setShowRedirectHome={setShowRedirectHome} getMembers={getMembers}  socket={socket} numRequestWaiting={numRequestWaiting} hasGameStarted={hasGameStarted} isRoomLead={isRoomLead} setShowOptionMenu={setShowOptionMenu} playerAway={playerAway} setPlayerAway={setPlayerAway} setPlayerLeft={setPlayerLeft} />
 
                         
-                        <div className="relative h-full" >
+                        <div className="relative h-full md:mt-16" >
                             <img className="relative -top-4 max-w-[90%] max-h-[80vh] w-full object-contain m-auto md:hidden " src={tableMobile} />
-                            <img className="relative -top-4 max-h-[100vh] object-contain m-auto w-11/12 hidden md:block " src={table} />
+                            <img className="relative md:top-4 max-h-[70vh] object-contain m-auto w-11/12 hidden md:block " src={table} />
                             <div className="" >
                                 {Array.apply(0, Array(10)).map(function (x, i) {
                                         
@@ -595,7 +635,8 @@ const Game = ({socket}) => {
                                         playerSeat={playerSeat} getSeatHandler={getSeatHandler} 
                                         players={players} hasGameStarted={hasGameStarted} 
                                         fullShow={fullShow} seatWaiting={seatWaiting}
-                                        setShowSeatRequestSentPopup={setShowSeatRequestSentPopup} 
+                                        setShowSeatRequestSentPopup={setShowSeatRequestSentPopup}
+                                        playerCreated={playerCreated} isRoomLead={isRoomLead} currentPlayerSeatNum={currentPlayerSeatNum}
                                         />
                                         
                                     })}
@@ -603,8 +644,8 @@ const Game = ({socket}) => {
                         </div> 
                         
 
-                        {dataLoaded && isRoomLead && Object.keys(players).length < 2 && <div className="w-9/12 p-2 text-sm bg-white rounded-lg absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" >
-                            <div className='text-[#3EA66C]' > <p className="font-bold" >Waiting Players.</p> Click below to copy the link and send to your friends.</div>
+                        {dataLoaded && isRoomLead && Object.keys(players).length < 2 && <div className="w-9/12 lg:w-6/12 px-2 lg:px-8 py-2 lg:py-4 text-sm lg:text-base bg-white rounded-lg lg:rounded-full absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" >
+                            <div className='text-[#3EA66C]' > <p className="font-bold lg:inline-block" >Waiting Players.</p> Click below to copy the link and send to your friends.</div>
                             <p className='mt-2 rounded-lg p-1 text-xs border-2 break-all' > {"http://localhost:3000"+window.location.pathname}</p>
                         </div>}
 
@@ -634,9 +675,16 @@ const Game = ({socket}) => {
                             )
                         }
 
+                        {
+                            (!dataLoaded || showLoader) && 
+                                <div className='absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-full' >
+                                    <ReactLoading type="spokes" color="#efefef" width={75} />
+                                </div>
+                        }
+
                         {showSeatRequestSentPopup && 
-                            <div className='w-11/12 rounded-lg z-10 px-4 py-2 bg-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2' >
-                                <p className='bg-[#EFEEEE] text-lg text-center p-2 rounded-md text-black' >Your requested this seat. Wait for owner approval</p>
+                            <div className='w-11/12 md:w-6/12 rounded-lg z-10 px-4 py-2 bg-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2' >
+                                <p className='bg-[#EFEEEE] text-lg text-center p-2 rounded-md text-black' >You requested this seat. Wait for owner approval</p>
                                 <button 
                                     onClick={e => setShowSeatRequestSentPopup(false)}
                                     className='border-[#939393] border-2 mt-4 text-[#939393] font-bold w-16 block rounded-lg ml-auto p-2' >OK</button>
@@ -644,11 +692,21 @@ const Game = ({socket}) => {
                         }
 
                         {hasGameStarted && 
-                            <div className='absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#333232] text-white/80 p-2 rounded-lg' > 
+                            <div className='absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#333232] text-white/80 p-2 md:px-8 md:text-lg rounded-lg' > 
                                 <p>Current Pot</p>
                                 <p className='text-center font-bold text-lg' >{roundDetails.currentPot}</p>
+                                
                             </div>
                         }
+
+                        {hasGameStarted && <div className='absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[7rem] bg-[#333232] text-white/80 p-2 w-16 md:w-20 text-center md:px-8 md:text-lg rounded-lg'>
+                            <h2> {currentPlayerName} </h2>
+                            {currentPlayerName == name ? 
+                            <p className={`text-center w-full ${timeRemaining < 10 ? "text-red-600 text-bold" : "" }`} >{timeRemaining}</p>
+                            :
+                            <p className={`text-center w-full ${otherTimeRemaining < 10 ? "text-red-600 text-bold" : "" }`} >{otherTimeRemaining}</p>
+                            }
+                            </div>}
 
                         {showPlayerWonPopup  && 
                             <PopupMessage message={playerWonMessage} />
@@ -688,14 +746,26 @@ const Game = ({socket}) => {
                             }}
                             className='border-2 border-red-600 text-red-600 w-20 m-auto rounded-lg mt-4 p-1' >OK</button>
                         </div>
+
+                        <div className={`w-64 text-red-600 text-center rounded-lg z-10 px-4 py-6 bg-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 font-bold ${playerTimeout ? "" : "hidden"}`} >
+                            <p>You have been timed out</p>
+                            <button 
+
+                            onClick={() => {
+                                setPlayerTimeout(false)
+                                // window.location = '/'
+
+                            }}
+                            className='border-2 border-red-600 text-red-600 w-20 m-auto rounded-lg mt-4 p-1' >OK</button>
+                        </div>
                         
-                        <div className='relative flex' >
-                            {!hasGameStarted && <div className='relative mt-2 left-2 h-12 w-3/12 bg-black/40 text-white/80 text-center'>
+                        <div className='relative flex md:absolute md:bottom-4 md:w-full' >
+                            {!hasGameStarted && <div className='relative mt-2 left-2 h-12 w-3/12 md:w-36 bg-black/40 text-white/80 text-center'>
                                 ad box
                             </div>}
 
-                            <div className='absolute right-2' >
-                                {isRoomLead && Object.keys(players).length > 1 && !hasGameStarted && <StartGameBtn roomId={roomId} setHasGameStarted={setHasGameStarted} setFullShow={setFullShow} socket={socket} roundDetails={roundDetails} getRoundDetails={getRoundDetails} />}
+                            <div className='absolute right-2 md:right-4' >
+                                {isRoomLead && Object.keys(players).length > 1 && !hasGameStarted && <StartGameBtn roomId={roomId} setHasGameStarted={setHasGameStarted} setShowLoader={setShowLoader} setPlayerTimeout={setPlayerTimeout} setFullShow={setFullShow} socket={socket} roundDetails={roundDetails} getRoundDetails={getRoundDetails} />}
                             </div>
                         </div>
                     </div> 
@@ -715,7 +785,7 @@ const Game = ({socket}) => {
 
                 {hasGameStarted && !showRaiseSlider && !(playerIndex != -1 && roundDetails.currentPlayerCardSeen[playerIndex] == "Yes") && <button 
                 onClick={e => handleMove("SeeCards")} 
-                className={`game-btn absolute -translate-y-full right-2 p-1`} >
+                className={`game-btn absolute -translate-y-full right-2 md:right-8 md:bottom-16 p-1 md:p-4`} >
                         See Cards
                 </button>}
 
@@ -723,7 +793,7 @@ const Game = ({socket}) => {
                 onClick={e => {
                     handleMove("FullShow")
                 }} 
-                className={`game-btn absolute -translate-y-full left-2 p-1  ${isPlayerTurn ? "" : "opacity-40"}`} disabled={!isPlayerTurn} >
+                className={`game-btn absolute -translate-y-full left-2 md:bottom-16 p-1 md:p-4  ${isPlayerTurn ? "" : "opacity-40"}`} disabled={!isPlayerTurn} >
                         Full Show
                 </button>}
 
@@ -733,25 +803,25 @@ const Game = ({socket}) => {
                     handleSideShowRequest()
 
                 }} 
-                className={`game-btn absolute -translate-y-full left-2 p-1  ${isPlayerTurn ? "" : "opacity-40"}`} disabled={!isPlayerTurn} >
+                className={`game-btn absolute -translate-y-full left-2 p-1 md:bottom-16 md:p-4  ${isPlayerTurn ? "" : "opacity-40"}`} disabled={!isPlayerTurn} >
                         Side Show
                 </button>}
 
-                {hasGameStarted && !showRaiseSlider && <div className='grid grid-cols-4 w-full gap-4 mt-2 px-2' >
+                {hasGameStarted && !showRaiseSlider && <div className='grid grid-cols-4 w-full md:right-4 md:w-5/12 gap-4 mt-2  px-2 md:absolute md:bottom-6  ' >
  
-                    <button className={`game-btn col-start-2 ${isPlayerTurn ? "" : "opacity-40"}`} disabled={!isPlayerTurn} onClick={e => setShowRaiseSlider(true)} >
+                    <button className={`game-btn md:p-6 col-start-2 ${isPlayerTurn ? "" : "opacity-40"}`} disabled={!isPlayerTurn} onClick={e => setShowRaiseSlider(true)} >
                         Raise   
                     </button>
 
                     <div
                         onClick={e => handleMove("Check")} 
-                        className={`game-btn col-start-3 ${isPlayerTurn ? "" : "opacity-40"}`} disabled={!isPlayerTurn} >
+                        className={`game-btn md:p-6 col-start-3 ${isPlayerTurn ? "" : "opacity-40"}`} disabled={!isPlayerTurn} >
                         Check
                     </div>
                     
                     <div
                         onClick={e => handleMove("Pack")} 
-                        className={`game-btn col-start-4 !text-red-500 !border-red-700 ${isPlayerTurn ? "" : "opacity-40"}`} disabled={!isPlayerTurn} >
+                        className={`game-btn md:p-6 col-start-4 !text-red-500 !border-red-700 ${isPlayerTurn ? "" : "opacity-40"}`} disabled={!isPlayerTurn} >
                         Fold
                     </div>
 

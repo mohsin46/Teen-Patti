@@ -1,6 +1,7 @@
 import React, { createRef } from 'react';
+import ReactLoading from "react-loading"
 
-function StartScreen({getDetails}) {
+function StartScreen({getDetails, showLoading}) {
 
     let user_name = createRef();
     let stack = createRef();
@@ -8,13 +9,18 @@ function StartScreen({getDetails}) {
     return (
         <div className='bg-[#202020]'>
         <div className="bg-mobile-splash sm:bg-splash h-screen text-slate-200 bg-contain bg-no-repeat bg-center" >
+            { showLoading ? 
+            <div className='absolute top-1/4 left-1/2 -translate-x-1/2' >
+                <ReactLoading type="spin" color="#efefef" width={250} />
+            </div> 
+            : 
             <div className='w-full sm:w-5/12 md:w-4/12 lg:w-3/12 xl:w-3/12 rounded-lg absolute top-1/2 left-1/2 -translate-y-1/2 
             -translate-x-1/2 p-5 bg-black/80' >
                 <div>
                     <h3 className="text-xl sm:text-lg lg:text-xl xl:text-2xl text-center font-['Mulish'] font-light tracking-widest pb-4" >NEW GAME</h3>
                 </div>
                 <hr className='bg-white opacity-20' />
-                <div className='p-4 sm:p-1 md:p-2 xl:p-4 text-sm text-gray-300 text-center' >
+                <div className='p-4 sm:p-1 md:p-2 xl:px-2 xl:py-4 text-sm text-gray-300 text-center' >
                     <p>
                         Play free private online poker with your friends. <br/>
                         No download and no registration needed.
@@ -39,6 +45,7 @@ function StartScreen({getDetails}) {
                     </button>
                 </div>
             </div>
+            }
         </div> 
         </div>
     );

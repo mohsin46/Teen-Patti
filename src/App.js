@@ -12,13 +12,14 @@ import io from 'socket.io-client';
 import StartScreen from "./StartScreen";
 import Game from "./Game/Game";
 
-const socket = io.connect('https://teenpattiexpress.herokuapp.com/');
+const socket = io.connect('http://localhost:4000');
 
 function App() {
 
   const [name, setName] = useState("")
   const [stack, setStack] = useState(0)
   const [gameURL, setGameURL] = useState("")
+  const [showLoading, setShowLoading] = useState(false)
   let navigate = useNavigate()
 
   const getDetails = async (user_name, user_stack) => {
@@ -31,12 +32,13 @@ function App() {
 
   useEffect(() => {
     if (name != "" && stack != 0){
+      setShowLoading(true)
       getGameURL()
     }
   }, [name, stack])
 
   const getGameURL = () => {
-    axios.post("https://teenpatti321.herokuapp.com/createMember&Room", "", {params: {
+    axios.post("http://localhost:8000/createMember&Room", "", {params: {
       name, stack
     }})
     .then(response => {
@@ -62,12 +64,7 @@ function App() {
   return (
     <div className="App max-h-screen">
         <Routes>
-          <Route path="/" 
-            element={
-              gameURL == "" ?
-              <StartScreen getDetails={getDetails} /> :
-              <h1>{gameURL}</h1>} 
-            />
+          <Route path="/" element={<StartScreen getDetails={getDetails} showLoading={showLoading} />} />
           <Route path="games/:url" element={<Game socket={socket} />} />
         </Routes>
     </div>

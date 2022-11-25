@@ -1,5 +1,5 @@
 .options {
-    @apply m-auto h-full px-2 py-5 rounded-t-lg ;
+    @apply m-auto h-full px-2 py-5 rounded-t-lg md:text-xl md:font-bold ;
 }
 
 .game-btn {
