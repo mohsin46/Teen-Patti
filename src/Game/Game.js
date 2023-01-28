@@ -806,7 +806,7 @@ const Game = ({socket}) => {
 
                         {dataLoaded && isRoomLead && Object.keys(players).length < 2 && <div className="w-9/12 lg:w-6/12 px-2 lg:px-8 py-2 lg:py-4 text-sm lg:text-base bg-white rounded-lg lg:rounded-full absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" >
                             <div className='text-[#3EA66C]' > <p className="font-bold lg:inline-block" >Waiting Players.</p> Click below to copy the link and send to your friends.</div>
-                            <p className='mt-2 rounded-lg p-1 text-xs border-2 break-all' > {"http://localhost:3000"+window.location.pathname}</p>
+                            <p className='mt-2 rounded-lg p-1 text-xs border-2 break-all' > {window.location.href}</p>
                         </div>}
 
                         {/* {hasGameStarted && <Cards roundDetails={roundDetails} name={name} playerIndex={playerIndex} />} */}
