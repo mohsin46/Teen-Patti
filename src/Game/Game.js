@@ -276,6 +276,8 @@ const Game = ({socket}) => {
             console.log("called from update move");
             // setReloadRoundInfo(val => !val)
             if(data.message && data.message.includes("win")){
+                getRoundDetails()
+                getMembers()
                 handleClearInterval()
                 // clearInterval(otherTimerId)
                 // otherTimerId = 0
@@ -283,10 +285,11 @@ const Game = ({socket}) => {
                 handleClearOtherInterval()
                 setPlayerWonMessage(data.message)
                 setShowPlayerWonPopup(true)
+                
                 setTimeout(() => {
                     setHasGameStarted(false)
                     setShowPlayerWonPopup(false)
-                    getMembers()
+                    
                 }, 5000);
             }
             getRoundDetails("called from update move")
@@ -489,7 +492,7 @@ const Game = ({socket}) => {
     
     const getSeatHandler = (seatNum) => {
         // console.log("room lead", isRoomLead);
-        if((playerSeat === 0 || playerSeat === undefined)){
+        if((playerSeat === 0 || playerSeat === undefined) && seatNum !== 1){
             setTempSeatNum(seatNum)
             requestSeat(seatNum)
         }
@@ -637,6 +640,8 @@ const Game = ({socket}) => {
                 setFullShow(true)
             }   
             if (data.Message && data.Message.includes("win")){
+                getRoundDetails()
+                getMembers()
                 handleClearInterval()
                 setPlayerWonMessage(data.Message)
                 setShowPlayerWonPopup(true)
@@ -647,7 +652,6 @@ const Game = ({socket}) => {
                 setTimeout(() => {
                     setHasGameStarted(false)
                     setShowPlayerWonPopup(false)
-                    getMembers()
                 }, 5000);
             }
             // socket.emit("update_move", {
