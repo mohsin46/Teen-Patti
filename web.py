@@ -560,6 +560,9 @@ async def updateMove(sid, data):
             # Changing player_won name 
             roundDetails[room_index]["player_won"] = winner
             roundDetails[room_index]["current_player_seatnum"] = -1
+            roundDetails[room_index]["currentPlayerStack"][winner] += current_pot
+            
+
             await sio.emit("player_update_move", {
                 "roomId" : roomId,
                 "message": f"{winner} is the winner",
