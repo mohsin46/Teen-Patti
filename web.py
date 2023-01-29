@@ -561,6 +561,24 @@ async def updateMove(sid, data):
             roundDetails[room_index]["player_won"] = winner
             roundDetails[room_index]["current_player_seatnum"] = -1
             roundDetails[room_index]["currentPlayerStack"][players_seat_num.index(winner_seatnum)] += current_pot
+
+
+            # Added code for packing
+            for room in roundDetails:
+                        if room["roomId"] == roomId:
+                            players_stack = room['currentPlayerStack']
+
+            active_members_list = []
+            for i, room in enumerate(activeMembers):
+                if room["roomId"] == roomId:
+                    active_members_list.append([i, room])
+
+            for i in range(len(player_names)):
+                for j, member in active_members_list:
+                    print(player_names, i, member)
+                    if member["playerName"] == player_names[i]:
+                        activeMembers[j]["playerStack"] = str(players_stack[i])
+                        activeMembers[j]["playerSeatNum"] = int(players_seat_num[i])
             
 
             await sio.emit("player_update_move", {
@@ -1078,4 +1096,4 @@ app.router.add_get('/', index)
 
 ## We kick off our server
 if __name__ == '__main__':
-    web.run_app(app)
+    web.run_app(app, port=8080)
