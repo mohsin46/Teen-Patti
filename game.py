@@ -3,7 +3,6 @@ import socketio
 import random
 from helper_functions import get_random_string  ## Getting random string
 from generating_winning_seq import check_winner  ## This function will help us determine the winner of the round
-import ssl
 
 activeMembers = []
 roomDetails = []
@@ -562,7 +561,8 @@ async def updateMove(sid, data):
             roundDetails[room_index]["player_won"] = winner
             roundDetails[room_index]["current_player_seatnum"] = -1
             roundDetails[room_index]["currentPlayerStack"][players_seat_num.index(winner_seatnum)] += current_pot
-            
+
+
             # Added code for packing
             for room in roundDetails:
                         if room["roomId"] == roomId:
@@ -579,6 +579,7 @@ async def updateMove(sid, data):
                     if member["playerName"] == player_names[i]:
                         activeMembers[j]["playerStack"] = str(players_stack[i])
                         activeMembers[j]["playerSeatNum"] = int(players_seat_num[i])
+            
 
             await sio.emit("player_update_move", {
                 "roomId" : roomId,
@@ -1092,9 +1093,7 @@ def transferOwnerShip(roomId, name, owner):
 ## We bind our aiohttp endpoint to our app
 ## router
 app.router.add_get('/', index)
-ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-ssl_context.load_cert_chain('domain_srv.crt', 'domain_srv.key')
 
 ## We kick off our server
 if __name__ == '__main__':
-    web.run_app(app, ssl_context=ssl_context, port=8080)
+    web.run_app(app)
