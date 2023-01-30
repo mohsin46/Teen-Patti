@@ -587,7 +587,7 @@ async def updateMove(sid, data):
                 }, room=roomId)
             return({"Status":"Success", "Message": f"{winner} is the winner"})
 
-        elif(current_player == player_names[room_index] and len(current_player_rotation)>1):
+        elif(current_player == player_names[index] and len(current_player_rotation)>1):
             roundDetails[room_index]["current_player_seatnum"] = current_player_rotation[1]
             roundDetails[room_index]["currentPlayerRotation"].remove(current_player_seat_num)
             roundDetails[room_index]["currentPlayerPack"][index] = "Yes"
@@ -599,7 +599,7 @@ async def updateMove(sid, data):
                 "move": move
                 }, room=roomId)
             return({"Status":"Success", "Message": f"{current_player} has been packed"})
-        elif(current_player != player_names[room_index] and len(current_player_rotation)>1):
+        elif(current_player != player_names[index] and len(current_player_rotation)>1):
             # index1 = players_seat_num[player_names.index(name)]
             roundDetails[room_index]["currentPlayerRotation"].remove(players_seat_num[player_names.index(name)])
             roundDetails[room_index]["currentPlayerPack"][player_names.index(name)] = "Yes"
@@ -1084,6 +1084,14 @@ async def start_timer(sid, data):
     
     await sio.emit("player_start_timer", data, room=data['roomId'])
     return data
+
+
+@sio.on("stop_timer")
+async def start_timer(sid, data):
+    print("stop timer req received")
+    await sio.emit("player_stop_timer", data, room=data['roomId'])
+    return data
+    
 # API endpoint : transferOwnerShip :: This api trasnfer ownership of the game to the player mentioned
 
 def transferOwnerShip(roomId, name, owner):
