@@ -337,7 +337,7 @@ const Game = ({socket}) => {
 
         socket.on("player_stop_timer", (data) => {
             setPlayerDate(null)
-            console.log("timer stopped");
+            console.log("player timer stopped");
         })
 
     }, [socket])
@@ -623,7 +623,7 @@ const Game = ({socket}) => {
                 roomId,
                 name
             })
-            console.log("timer stopped");
+            
         }
 
         socket.emit("updateMove", {
