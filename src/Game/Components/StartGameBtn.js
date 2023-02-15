@@ -10,7 +10,7 @@ const StartGameBtn = ({roomId, setHasGameStarted, getMembers, setPlayerDate, set
 
     const startGame = () => {
         setShowLoader(true)
-        console.log(roundDetails, {}, roundDetails == {}, roundDetails === {});
+        console.log("eound details",roundDetails);
         if(roundDetails.roundStarted == "Yes"){
             // axios.put("http://localhost:8000/refreshRound", "", {
             //     params: {
@@ -30,6 +30,8 @@ const StartGameBtn = ({roomId, setHasGameStarted, getMembers, setPlayerDate, set
             //     setShowLoader(false)
             //     setPlayerDate(new Date())
             // }).catch(e => console.log(e))
+
+            console.log("REFRESH ROUND CALLED");
 
             socket.emit("refreshRound", {
                 roomId
@@ -68,6 +70,8 @@ const StartGameBtn = ({roomId, setHasGameStarted, getMembers, setPlayerDate, set
             //     setPlayerDate(new Date())
                 
             // }).catch(e => console.log(e))
+
+            console.log("START FIRST ROUND CALLED");
 
             socket.emit("startFirstRound", {roomId}, (data) => {
                 console.log(data);

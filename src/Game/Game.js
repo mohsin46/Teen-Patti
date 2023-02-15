@@ -5,13 +5,10 @@ import table from "../assets/table.png"
 import Seat from './Components/Seat';
 import { useLocation } from 'react-router-dom';
 import axios from 'axios';
-import CancelSeatRequest from './Components/CancelSeatRequest';
-import RequestIndicator from './Components/RequestIndicator';
 import OptionMenu from './OptionMenu';
 import StartGameBtn from './Components/StartGameBtn';
 import { useCookies } from 'react-cookie';
 import RaiseAmountSlider from './Components/RaiseAmountSlider';
-import Cards from './Components/Cards';
 import useWindowDimensions  from "../helper/windowDimensions"
 import TopBar from './Components/TopBar';
 import PopupMessage from './Components/PopupMessage';
@@ -45,7 +42,6 @@ const Game = ({socket}) => {
     const [playerWon, setPlayerWon] = useState("")
     const [playerWonMessage, setPlayerWonMessage] = useState("")
     const [showPlayerWonPopup, setShowPlayerWonPopup] = useState(false)
-    const { height, width } = useWindowDimensions();
     const [playerAway, setPlayerAway] = useState(false)
     const [playerLeft, setPlayerLeft] = useState(false)
     const [sideShowRequest, setSideShowRequest] = useState({name: "", seat: -1})
@@ -65,6 +61,7 @@ const Game = ({socket}) => {
     const [otherPlayerName, setOtherPlayerName] = useState('')
     const [playerDate, setPlayerDate] = useState(new Date().getTime())
     const [redirectHomeMessage, setShowRedirectHomeMessage] = useState("")
+    const [updateTimer, setUpdateTimer] = useState(false)
     // const [otherPlayerTime, setOtherPlayerTime] = useState(new Date())
     const [date, setDate] = useState(new Date())
 
@@ -109,12 +106,13 @@ const Game = ({socket}) => {
         }, 1000)
         
         if (location.state !== null){
-
+            console.log("non null state");
             if(cookies.roomId !== roomId){
-                removeCookie("roomId")
-                removeCookie("name")
-                removeCookie("stack")
-                removeCookie("hasGameStarted")
+                console.log("not my room");
+                removeCookie("roomId", {path:'/'})
+                removeCookie("name",{path:'/'})
+                removeCookie("stack",{path:'/'})
+                removeCookie("hasGameStarted",{path:'/'})
 
                 setName(location.state.name)
                 setStack(location.state.stack)
@@ -124,24 +122,34 @@ const Game = ({socket}) => {
                 console.log(players);
                 console.log("set room leaded", location.state.name);
                 // setRoomLeader(location.state.name)
-                removeCookie("hasGameStarted")
+                removeCookie("hasGameStarted",{path:'/'})
                 setPlayerCreated(true)
                 setCookie("name", location.state.name, { path: '/' })
                 setCookie("stack", location.state.stack, { path: '/' })
                 setCookie("roomId", roomId, { path: '/' })
+
             }
 
             else {
+                console.log("my room");
                 setName(cookies.name)
                 setStack(cookies.stack)
+                getMembers()
+                updateRequestList()
                 setPlayerCreated(true)
+                setIsRoomLead(true)
                 var seat = Object.keys(players).find(key => players[key] === name)
                 if (!(seat === undefined)){
                     setPlayerSeat(seat)
                 }
+                socket.emit("joinRoom", {roomId})
+                getRoundDetails()
                 console.log("game start", cookies.hasGameStarted);
                 if(cookies.hasGameStarted === "true"){
                     setHasGameStarted(true)
+                    // console.log("time", roundDetails.move_time, Date.parse(roundDetails.move_time));
+                    // setPlayerDate(Date.parse(roundDetails.move_time))
+                    // setUpdateTimer(!updateTimer)
 
                     // getRoundDetails("called from useeffect")
                 }
@@ -157,30 +165,38 @@ const Game = ({socket}) => {
         }
 
         else if (cookies.roomId) {
+            console.log("location null state");
             if(cookies.roomId === roomId){
+                console.log("same room");
                 setName(cookies.name)
                 setStack(cookies.stack)
                 setPlayerCreated(true)
+                getMembers()
+
+                socket.emit("joinRoom", {roomId})
+
                 var seat = Object.keys(players).find(key => players[key] === name)
                 if (!(seat === undefined)){
                     setPlayerSeat(seat)
                 }
                 if(cookies.hasGameStarted === "true"){
                     setHasGameStarted(true)
+                    getRoundDetails()
+                    // console.log("time", roundDetails.move_time, Date.parse(roundDetails.move_time));
+                    // setPlayerDate(Date.parse(roundDetails.move_time))
+                    // setUpdateTimer(!updateTimer)
 
                     // getRoundDetails("called from useeffect")
                 }
-
-                socket.emit("player_joined", {
-                    roomId
-                })
+               
             }
 
             else{
-                removeCookie("roomId")
-                removeCookie("name")
-                removeCookie("stack")
-                removeCookie("hasGameStarted")
+                console.log("different room");
+                removeCookie("roomId",{path:'/'})
+                removeCookie("name",{path:'/'})
+                removeCookie("stack",{path:'/'})
+                removeCookie("hasGameStarted",{path:'/'})
             }
         }
 
@@ -285,6 +301,8 @@ const Game = ({socket}) => {
                 handleClearOtherInterval()
                 setPlayerWonMessage(data.message)
                 setShowPlayerWonPopup(true)
+
+                setCookie("hasGameStarted", false, { path: '/' })
                 
                 setTimeout(() => {
                     setHasGameStarted(false)
@@ -317,11 +335,8 @@ const Game = ({socket}) => {
         })
 
         socket.on("player_start_timer", (data) => {
+            setUpdateTimer(!updateTimer)
             console.log("player timer started", data.name);
-            // setCurrentPlayerName(data.name)
-            console.log(data);
-            console.log(Date.parse(data.date));
-            setPlayerDate(Date.parse(data.date))
             // Date.parse(data.date)
 
         })
@@ -374,6 +389,15 @@ const Game = ({socket}) => {
     // }, [currentPlayerSeatNum])
 
     useEffect(() => {
+        
+            // setCurrentPlayerName(data.name)
+        console.log("timer started");
+        console.log(roundDetails);
+        console.log("time", roundDetails.move_time, Date.parse(roundDetails.move_time));
+        setPlayerDate(Date.parse(roundDetails.move_time))
+    }, [updateTimer])
+
+    useEffect(() => {
         console.log("name", name, "req player name", reqPlayerName);
         if (reqPlayerName == name){
             setIsReqPlayer(true)
@@ -413,17 +437,19 @@ const Game = ({socket}) => {
         socket.emit("getRoundInfo", {roomId}, (res) => {
             console.log("round detail",res);
             setRoundDetails(res)
+            setUpdateTimer(!updateTimer)
             setCurrentPlayerName(res.current_player)
             console.log("CURRENT PLAYER", res.current_player);
             // findPlayerTurn()
-            console.log("finding player turn", name, res.current_player);
+            // console.log("finding player turn", name, res.current_player);
             if(res.current_player == name){
                 setIsPlayerTurn(true)
                 console.log("IT IS " + name + "'s TURN");
                 if(timerId == 0){
                     console.log("player timer start");
-                    const date = new Date()
-                    setPlayerDate(date.getTime())
+                    console.log("round details", res)
+                    console.log("time", res.move_time, Date.parse(res.move_time));
+                    setPlayerDate(Date.parse(res.move_time))
                     socket.emit("start_timer", {
                         roomId,
                         playerSeat,
@@ -460,8 +486,9 @@ const Game = ({socket}) => {
     // }, [currentPlayerName])
 
     useEffect(() => {
-        console.log("round details");
+        console.log("round detailssss");
         console.log(roundDetails);
+        
     }, [roundDetails])
 
     const getMembers = async () => {
@@ -512,6 +539,7 @@ const Game = ({socket}) => {
         setCookie("stack", stack, { path: '/' })
         setCookie("roomId", roomId, { path: '/' })
         setPlayerCreated(true)
+        getMembers()
     }
 
     const requestSeat = (seatNum) => {
@@ -546,8 +574,9 @@ const Game = ({socket}) => {
                 console.log("IT IS " + name + "'s TURN");
                 if(timerId == 0){
                     console.log("player timer start");
-                    const date = new Date()
-                    setPlayerDate(date.getTime())
+                    // const date = new Date()
+                    console.log("round", roundDetails);
+                    setPlayerDate(Date.parse(roundDetails.move_time))
                     socket.emit("start_timer", {
                         roomId,
                         playerSeat,
@@ -597,7 +626,7 @@ const Game = ({socket}) => {
 
     useEffect(() => {
         // console.log(currentPlayerName, playerDate, date.getTime() - playerDate);
-        if(name == currentPlayerName && hasGameStarted && playerDate && (date.getTime() - playerDate >= 30000 ) ){
+        if(name == currentPlayerName && hasGameStarted && playerDate && (date.getTime() - playerDate >= 30000 ) && !showPlayerWonPopup){
             setPlayerTimeout(true)
             setPlayerDate(null)
             socket.emit("stop_timer", {
@@ -646,6 +675,7 @@ const Game = ({socket}) => {
                 setPlayerWonMessage(data.Message)
                 setShowPlayerWonPopup(true)
                 // clearInterval(otherTimerId)
+                setCookie("hasGameStarted", false, { path: '/' })
                 handleClearOtherInterval()
                 // otherTimerId = 0
                 // setOtherTimeRemaining(30)
@@ -862,7 +892,7 @@ const Game = ({socket}) => {
                         {hasGameStarted && <div className='absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[7rem] bg-[#333232] text-white/80 p-2 w-16 md:w-40 text-center md:px-8 md:text-lg rounded-lg'>
                             <h2 > {currentPlayerName} </h2>
 
-                            <p className="text-center w-full" > { playerDate && Math.trunc((date.getTime() - playerDate) / 1000) } </p>
+                            <p className="text-center w-full" > { playerDate && !showPlayerWonPopup && Math.trunc((date.getTime() - playerDate) / 1000) } </p>
 
                             
                             {/* {roundDetails.current_player_seatnum == playerSeat ? 
