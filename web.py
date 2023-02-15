@@ -1,5 +1,6 @@
 from aiohttp import web
 import socketio
+import datetime
 import random
 from helper_functions import get_random_string  ## Getting random string
 from generating_winning_seq import check_winner  ## This function will help us determine the winner of the round
@@ -97,7 +98,11 @@ async def create_member_room(sid, message):
     return({"Status":"Success", "Message":"New room and player has been created", "data":room_id})
 
 
-
+@sio.on("joinRoom")
+async def create_member_room(sid, message):
+    print("new join room", message["roomId"])
+    sio.enter_room(sid, message["roomId"])
+    
 # API endpoint : createmember :: creating new player, this is the player joining preexisting room
 
 @sio.on("createMember")
@@ -432,13 +437,14 @@ async def startFirstRound(sid, data):  ## starts round and assigns card to playe
         "currentPlayerDecision":"-", "currentBoard":starting_board, "currentDealer": current_dealer_name, "currentGameType":"Normal", "current_player":current_player,"current_player_seatnum":current_player_seatnum,
         "currentPlayerCardSeen": list(temp_array), "currentPlayerCards": ls_curr_cards, "currentPlayerNames":ls_curr_names, "currentPlayerPack": temp_array, "currentPlayerSeatNum":ls_curr_seatnum,
         "currentPot":float(starting_board)*len(ls_curr_names), "roundStarted": "Yes","currentPlayerRotation":list(temp_array2), "totalPlayerNames": ls_total_names, "totalPlayerSeatNum":ls_total_seatnum, "fullShowPossible": False,
-        "sideShowPossible":False, "currentPlayerBoard": list(temp_array1), "currentPlayerStack": ls_curr_stack, "game_board": starting_board, "player_won":""}
+        "sideShowPossible":False, "currentPlayerBoard": list(temp_array1), "currentPlayerStack": ls_curr_stack, "game_board": starting_board, "player_won":"", "move_time":str(datetime.datetime.now())}
 
         roundDetails.append(mydict)
 
         print("point 8")  
         print(roundDetails)
         await sio.emit("gameStarted", {}, room=roomId)
+        print("game started")
         return({"Status":"Success", "Message": "Players have been assigned their cards"})
     except Exception as e:
         print(e)
@@ -512,6 +518,8 @@ async def updateMove(sid, data):
     player_cards = document['currentPlayerCards']
     current_player_pack = document['currentPlayerPack']
     current_player_name = document['currentPlayerNames']
+    roundDetails[room_index]["move_time"] = str(datetime.datetime.now())
+    print("TIME UPDATED")
     print("document",document)
     print("current_player_pack",current_player_pack)
 
@@ -618,7 +626,7 @@ async def updateMove(sid, data):
         if((float(players_stack[index]) - 2*float(current_board) < 0 and players_card_seen[index] == "Yes") or (float(players_stack[index]) - float(current_board) < 0 and players_card_seen[index] == "No") ):
             roundDetails[room_index]["currentPlayerPack"][index] = "Yes"
             if(current_player == player_names[room_index] and len(current_player_rotation)>1):
-                roundDetails[room_index]["current_player_seatnum"]= current_player_rotation[1]
+                roundDetails[room_index]["c56+urrent_player_seatnum"]= current_player_rotation[1]
                 roundDetails[room_index]["currentPlayerRotation"].remove(current_player_seat_num)
                 index1 = players_seat_num.index(current_player_rotation[1])
                 roundDetails[room_index]["current_player"] = player_names[index1]
@@ -687,14 +695,14 @@ async def updateMove(sid, data):
         if(float(players_stack[index])-float(amount)>=0):
             if(players_card_seen[index] == "Yes"):
                 roundDetails[room_index]["currentPlayerStack"][index] = float(players_stack[index]) - float(amount)
-                roundDetails[room_index]["currentPot"] = float(current_pot)+float(amount) 
-                roundDetails[room_index]["currentBoard"] = float(amount)/2
+                roundDetails[room_index]["currentPot"] += float(current_pot)+float(amount) 
+                roundDetails[room_index]["currentBoard"] += float(amount)/2
                 print("case 1")
                 
             else:
                 roundDetails[room_index]["currentPlayerStack"][index] = float(players_stack[index]) - float(amount)
-                roundDetails[room_index]["currentPot"] = float(current_pot)+float(amount) 
-                roundDetails[room_index]["currentBoard"] = float(amount)
+                roundDetails[room_index]["currentPot"] += float(current_pot)+float(amount) 
+                roundDetails[room_index]["currentBoard"] += float(amount)
                 print(amount)
                 print(roundDetails[room_index]["currentBoard"])
                 print("case 2")
@@ -1057,7 +1065,7 @@ async def refreshRound(sid, data):
         "currentPlayerDecision":"-", "currentBoard":starting_board, "currentDealer": current_dealer_name, "currentGameType":"Normal", "current_player":current_player,"current_player_seatnum":current_player_seatnum,
         "currentPlayerCardSeen": list(temp_array), "currentPlayerCards": ls_curr_cards, "currentPlayerNames":ls_curr_names, "currentPlayerPack": list(temp_array), "currentPlayerSeatNum":ls_curr_seatnum,
         "currentPot":float(starting_board)*len(ls_curr_names), "roundStarted": "Yes","currentPlayerRotation":dummy_temp, "totalPlayerNames": ls_total_names, "totalPlayerSeatNum":ls_total_seatnum, "fullShowPossible": False,
-        "sideShowPossible":False, "currentPlayerBoard": list(temp_array1), "currentPlayerStack": ls_curr_stack, "game_board":starting_board, "player_won":""}
+        "sideShowPossible":False, "currentPlayerBoard": list(temp_array1), "currentPlayerStack": ls_curr_stack, "game_board":starting_board, "player_won":"", "move_time":str(datetime.datetime.now())}
 
         for i, room in enumerate(roundDetails):
             if room["roomId"] == roomId:
@@ -1076,6 +1084,8 @@ async def refreshRound(sid, data):
     print(dummy_temp)
     await sio.emit("gameStarted", {"Status":"Success", "Message": "Players have been re-assigned their cards"}, room=roomId)
     print(dummy_temp)
+    # await sio.emit("gameStarted", {}, room=roomId)
+    print("game started")
     return({"Status":"Success", "Message": "Players have been re-assigned their cards"})
 
 
