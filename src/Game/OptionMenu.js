@@ -77,12 +77,10 @@ const OptionMenu = ({setShowOptionMenu, setSeatDeniedPlayer, playerSeat, sideSho
             </div>
             </div>
 
-
-
             {selectedTab == 'players' && !showPlayer &&
                 <div className='p-2 text-white m-auto mt-2 max-w-[520px] md:max-w-[890px] lg:max-w-[85%]' > 
                     
-                    {seatRequests.map((req, i) => {
+                    {isRoomLead && seatRequests.map((req, i) => {
                         return (
                             <div key={i} className="border-2 rounded-lg p-4 mt-2" >
                                 <p className='text-lg font-bold' >{req.name}</p>

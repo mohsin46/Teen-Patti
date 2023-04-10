@@ -18,7 +18,9 @@ const Game = ({ socket }) => {
 	const [playerSeat, setPlayerSeat] = useState(0);
 	const [showPopup, setShowPopup] = useState(true);
 	const [isRoomLead, setIsRoomLead] = useState(false);
+	const [tempSeatNum, setTempSeatNum] = useState(0);
 	const [seatWaiting, setSeatWating] = useState(false);
+	const [isRequestWaiting, setIsRequestWaiting] = useState(false);
 	const [seatRequests, setSeatRequests] = useState([]);
 	const [numRequestWaiting, setNumRequestWaiting] = useState(0);
 	const [showOptionMenu, setShowOptionMenu] = useState(false);
@@ -37,9 +39,11 @@ const Game = ({ socket }) => {
 	const [fullShow, setFullShow] = useState(false);
 	const [showSeatRequestSentPopup, setShowSeatRequestSentPopup] =
 		useState(false);
+	const [playerWon, setPlayerWon] = useState("");
 	const [playerWonMessage, setPlayerWonMessage] = useState("");
 	const [showPlayerWonPopup, setShowPlayerWonPopup] = useState(false);
 	const [playerAway, setPlayerAway] = useState(false);
+	const [playerLeft, setPlayerLeft] = useState(false);
 	const [sideShowRequest, setSideShowRequest] = useState({
 		name: "",
 		seat: -1,
@@ -51,16 +55,27 @@ const Game = ({ socket }) => {
 	const [sideShowResult, setSideShowResult] = useState("");
 	const [showSideShowResult, setShowSideShowResult] = useState(false);
 	const [playerTimeout, setPlayerTimeout] = useState(false);
+	const [timeRemaining, setTimeRemaining] = useState(30);
+	const [otherTimeRemaining, setOtherTimeRemaining] = useState(30);
+	const [timerId, setTimerId] = useState(0);
+	const [otherTimerId, setOtherTimerId] = useState(0);
 	const [showLoader, setShowLoader] = useState(false);
 	const [currentPlayerSeatNum, setCurrentPlayerSeatNum] = useState(-1);
 	const [currentPlayerName, setCurrentPlayerName] = useState("");
-	const [playerDate, setPlayerDate] = useState(null);
+	const [otherPlayerName, setOtherPlayerName] = useState("");
+	const [playerDate, setPlayerDate] = useState(new Date().getTime());
 	const [redirectHomeMessage, setShowRedirectHomeMessage] = useState("");
+	const [updateTimer, setUpdateTimer] = useState(false);
+	// const [otherPlayerTime, setOtherPlayerTime] = useState(new Date())
+	const [date, setDate] = useState(new Date());
+
 	let location = useLocation();
 	const [name, setName] = useState("");
 	const [stack, setStack] = useState(0);
 	const [players, setPlayers] = useState({});
-	const [date, setDate] = useState(new Date());
+
+	// var otherTimerId = 0
+	// var timerId = 0
 
 	const roomId = location.pathname.split("/")[2];
 
@@ -84,11 +99,15 @@ const Game = ({ socket }) => {
 		// getMembers()
 		// updateRequestList()
 
+		console.log("use effect init called");
+
+		// setInterval(() => {
+		//     console.log("ot id", otherTimerId);
+		// }, 1000)
+
 		var timer = setInterval(() => {
 			setDate(new Date());
 		}, 1000);
-
-		console.log("use effect init called");
 
 		if (location.state !== null) {
 			console.log("non null state");
@@ -129,6 +148,11 @@ const Game = ({ socket }) => {
 				console.log("game start", cookies.hasGameStarted);
 				if (cookies.hasGameStarted === "true") {
 					setHasGameStarted(true);
+					// console.log("time", roundDetails.move_time, Date.parse(roundDetails.move_time));
+					// setPlayerDate(Date.parse(roundDetails.move_time))
+					// setUpdateTimer(!updateTimer)
+
+					// getRoundDetails("called from useeffect")
 				}
 			}
 
@@ -155,6 +179,11 @@ const Game = ({ socket }) => {
 				if (cookies.hasGameStarted === "true") {
 					setHasGameStarted(true);
 					getRoundDetails();
+					// console.log("time", roundDetails.move_time, Date.parse(roundDetails.move_time));
+					// setPlayerDate(Date.parse(roundDetails.move_time))
+					// setUpdateTimer(!updateTimer)
+
+					// getRoundDetails("called from useeffect")
 				}
 			} else {
 				console.log("different room");
@@ -220,6 +249,7 @@ const Game = ({ socket }) => {
 
 		socket.on("seat_request_recieved", (data) => {
 			console.log("seat req received all broadcast");
+			setIsRequestWaiting(true);
 			updateRequestList();
 		});
 
@@ -254,6 +284,11 @@ const Game = ({ socket }) => {
 			if (data.message && data.message.includes("win")) {
 				getRoundDetails();
 				getMembers();
+				handleClearInterval();
+				// clearInterval(otherTimerId)
+				// otherTimerId = 0
+				// setOtherTimeRemaining(30)
+				handleClearOtherInterval();
 				setPlayerWonMessage(data.message);
 				setShowPlayerWonPopup(true);
 
@@ -287,9 +322,37 @@ const Game = ({ socket }) => {
 			setShowSideShowResult(true);
 			setTimeout(() => {
 				setShowSideShowResult(false);
+				setUpdateTimer(!updateTimer);
 			}, 3000);
 		});
+
+		socket.on("player_start_timer", (data) => {
+			console.log("update timer called");
+			setUpdateTimer(!updateTimer);
+			console.log("player timer started", data);
+			// Date.parse(data.date)
+		});
+
+		// socket.on("player_timeout", (data) => {
+		//     console.log(data.name, "timeout");
+		//     // clearInterval(otherTimerId)
+		//     // otherTimerId = 0
+		//     // setOtherTimeRemaining(30)
+		//     handleClearOtherInterval()
+		//     console.log("other timer stopped");
+		// })
+
+		socket.on("player_stop_timer", (data) => {
+			setPlayerDate(null);
+			console.log("player timer stopped");
+		});
 	}, [socket]);
+
+	const handleClearOtherInterval = () => {
+		clearInterval(otherTimerId);
+		// setOtherTimerId(0)
+		setOtherTimeRemaining(30);
+	};
 
 	const recSideShow = (data) => {
 		console.log("side show req rec", data.reqPlayer, name, playerSeat);
@@ -309,6 +372,29 @@ const Game = ({ socket }) => {
 		}, 3000);
 	};
 
+	// useEffect(() => {
+	//     if(currentPlayerSeatNum == playerSeat){
+	//         setIsPlayerTurn(true)
+	//         console.log(name, "turn");
+	//     }
+	// }, [currentPlayerSeatNum])
+
+	useEffect(() => {
+		// setCurrentPlayerName(data.name)
+		console.log("timer is being updated");
+		console.log(roundDetails);
+		console.log(
+			"time in update",
+			roundDetails.move_time,
+			Date.parse(roundDetails.move_time)
+		);
+		setPlayerDate(Date.parse(roundDetails.move_time));
+	}, [updateTimer]);
+
+	useEffect(() => {
+		console.log("time:", playerDate);
+	}, [playerDate])
+
 	useEffect(() => {
 		console.log("name", name, "req player name", reqPlayerName);
 		if (reqPlayerName == name) {
@@ -325,36 +411,89 @@ const Game = ({ socket }) => {
 		}
 	}, [players]);
 
-	const getRoundDetails = (text = "", seecards = false) => {
+	const getRoundDetails = (text='', seecards = false) => {
+		// axios.get("http://localhost:8000/getRoundInfo", {
+		//     params: {roomId}
+		// }).then(res => {
+
+		//     console.log("round detail",res.data);
+		//     setRoundDetails(res.data)
+		//     setCurrentPlayerName(res.data.current_player)
+		//     if(res.data !== {}){
+		//         if(res.data.player_won !== ""){
+		//             handleClearInterval(timerId)
+		//             setPlayerWon(res.data.player_won)
+		//         }
+		//         res.data.currentPlayerNames.forEach((p,i) => {
+		//             if (p == name){
+		//                 console.log("player index is ",i);
+		//                 setPlayerIndex(i)
+		//             }
+		//         });
+		//     }
+
+		// }).catch(err => console.log(err))
+
 		socket.emit("getRoundInfo", { roomId }, (res) => {
 			console.log("round detail", res);
 			setRoundDetails(res);
 			setCurrentPlayerName(res.current_player);
-			console.log(res.current_player, name);
-
-			// if (res.current_player == name) {
-			// 	setIsPlayerTurn(true);
-			// 	console.log("player turn time", res.move_time);
-			// 	setPlayerDate(Date.parse(res.move_time))
-			// 	console.log("IT IS " + name + "'s TURN");
-			// }
-			
+			console.log("CURRENT PLAYER", res.current_player);
+			if (seecards === false){
+				setUpdateTimer(!updateTimer)
+			}
+			// findPlayerTurn()
+			// console.log("finding player turn", name, res.current_player);
+			if (res.current_player == name) {
+				setIsPlayerTurn(true);
+				console.log("IT IS " + name + "'s TURN");
+				if (timerId == 0) {
+					console.log("player timer start");
+					console.log("round details", res);
+					console.log("time", res.move_time, Date.parse(res.move_time));
+					console.log("SEECARDS:", seecards);
+					if (seecards === false) {
+						console.log("NOT SEE CARDS");
+						setPlayerDate(Date.parse(res.move_time));
+						socket.emit("start_timer", {
+							roomId,
+							playerSeat,
+							name,
+							date,
+						});
+					}
+				}
+			}
+			if (res !== {}) {
+				if (res.player_won !== "") {
+					handleClearInterval(timerId);
+					setPlayerWon(res.player_won);
+				}
+				res.currentPlayerNames.forEach((p, i) => {
+					if (p == name) {
+						console.log("player index is ", i);
+						setPlayerIndex(i);
+					}
+				});
+			}
 		});
 	};
+
+	// const startOtherPlayerTimer = () => {
+	//     setOtherTimerId(setInterval( () => {
+	//         setOtherTimeRemaining((prev) => prev - 1)
+	//     }, 1000))
+	// }
+
+	// useEffect(() => {
+	//     if (name !== currentPlayerName){
+	//         startOtherPlayerTimer()
+	//     }
+	// }, [currentPlayerName])
 
 	useEffect(() => {
 		console.log("round detailssss");
 		console.log(roundDetails);
-		console.log("CURRENT PLAYER", roundDetails.current_player);
-		
-		if (roundDetails !== {}) {
-			roundDetails.currentPlayerNames?.forEach((p, i) => {
-				if (p == name) {
-					console.log("player index is ", i);
-					setPlayerIndex(i);
-				}
-			});
-		}
 	}, [roundDetails]);
 
 	const getMembers = async () => {
@@ -371,8 +510,8 @@ const Game = ({ socket }) => {
 
 	const updateRequestList = () => {
 		socket.emit("checkQueue", { roomId }, (data) => {
-			setSeatRequests(data?.data);
-			setNumRequestWaiting(data?.data.length);
+			setSeatRequests(data.data);
+			setNumRequestWaiting(data.data.length);
 		});
 		console.log("player queue", numRequestWaiting);
 	};
@@ -384,6 +523,7 @@ const Game = ({ socket }) => {
 	const getSeatHandler = (seatNum) => {
 		// console.log("room lead", isRoomLead);
 		if ((playerSeat === 0 || playerSeat === undefined) && seatNum !== 1) {
+			setTempSeatNum(seatNum);
 			requestSeat(seatNum);
 		}
 		// setSeatTaken(true)
@@ -443,23 +583,46 @@ const Game = ({ socket }) => {
 			if (currentPlayerName == name) {
 				setIsPlayerTurn(true);
 				console.log("IT IS " + name + "'s TURN");
-				setPlayerDate(Date.parse(roundDetails.move_time));
-			} else {
-				setIsPlayerTurn(false);
+				if (timerId == 0) {
+					console.log("player timer start");
+					// const date = new Date()
+					console.log("round", roundDetails);
+					setPlayerDate(Date.parse(roundDetails.move_time));
+					socket.emit("start_timer", {
+						roomId,
+						playerSeat,
+						name,
+						date,
+					});
+				}
 			}
 		}
 	};
 
+	// useEffect(() => {
+	//     if(timeRemaining <= 0 ){
+	//         console.log(name, "timeout complete", new Date());
+	//         setPlayerTimeout(true)
+	//         handleClearInterval(timerId)
+	//         handleMove("Pack")
+	//     }
+	// }, [timeRemaining])
+
+	// useEffect(() => {
+	//     if(otherTimeRemaining <= 0 ){
+	//         console.log(name,    "other timeout complete", new Date());
+	//         // setPlayerTimeout(true)
+	//         // clearInterval(otherTimerId)
+	//         handleClearOtherInterval()
+	//         // setOtherTimeRemaining(30)
+	//         // setOtherTimerId(0)
+	//         // handleMove("Pack")
+	//     }
+	// }, [otherTimeRemaining])
+
 	useEffect(() => {
 		console.log("CUURRENT PLAYER", currentPlayerName);
-		if (roundDetails.current_player == name) {
-			setIsPlayerTurn(true);
-			setPlayerDate(Date.parse(roundDetails.move_time));
-		} else {
-			setIsPlayerTurn(false);
-			setPlayerDate(null);
-		}
-		// findPlayerTurn();
+		findPlayerTurn();
 	}, [currentPlayerName]);
 
 	useEffect(() => {
@@ -470,6 +633,7 @@ const Game = ({ socket }) => {
 	}, [seatDeniedPlayer]);
 
 	useEffect(() => {
+		// console.log(currentPlayerName, playerDate, date.getTime() - playerDate);
 		if (
 			name == currentPlayerName &&
 			hasGameStarted &&
@@ -482,14 +646,28 @@ const Game = ({ socket }) => {
 				setPlayerTimeout(false);
 			}, 3000);
 			setPlayerDate(null);
+			socket.emit("stop_timer", {
+				roomId,
+				name,
+			});
 			console.log("player timed out");
 		}
 	}, [date]);
+
+	const handleClearInterval = () => {
+		clearInterval(timerId);
+		setTimerId(0);
+		setTimeRemaining(30);
+	};
 
 	const handleMove = (move, amount = 0) => {
 		if (move !== "SeeCards") {
 			setIsPlayerTurn(false);
 			setPlayerDate(null);
+			// socket.emit("stop_timer", {
+			// 	roomId,
+			// 	name,
+			// });
 		}
 
 		socket.emit(
@@ -512,20 +690,25 @@ const Game = ({ socket }) => {
 				if (data.Message && data.Message.includes("win")) {
 					// getRoundDetails();
 					getMembers();
+					handleClearInterval();
 					setPlayerWonMessage(data.Message);
 					setShowPlayerWonPopup(true);
+					// clearInterval(otherTimerId)
 					setCookie("hasGameStarted", false, { path: "/" });
+					handleClearOtherInterval();
+					// otherTimerId = 0
+					// setOtherTimeRemaining(30)
 					console.log("players", players);
 					setTimeout(() => {
 						setHasGameStarted(false);
 						setShowPlayerWonPopup(false);
 					}, 5000);
 				}
-				// socket.emit("update_move", {
-				// 	roomId,
-				// 	message: data.Message,
-				// 	move,
-				// });
+				socket.emit("update_move", {
+					roomId,
+					message: data.Message,
+					move,
+				});
 			}
 		);
 	};
@@ -604,6 +787,7 @@ const Game = ({ socket }) => {
 
 				setTimeout(() => {
 					setShowSideShowResult(false);
+					setUpdateTimer(!updateTimer);
 				}, 3000);
 
 				socket.emit("sideshow_result", {
@@ -611,15 +795,54 @@ const Game = ({ socket }) => {
 					message: data.Message,
 				});
 
-				socket.emit("update_move", {
-					roomId,
-					message: data.Message,
-					move: "SideShow",
-				});
+				// socket.emit("update_move", {
+				// 	roomId,
+				// 	message: data.Message,
+				// 	move: "SideShow",
+				// });
 
 				getRoundDetails("called from handle sideshow");
 			}
 		);
+		// axios
+		// 	.post("http://localhost:8000/updateMove", "", {
+		// 		params: {
+		// 			roomId,
+		// 			name: sideShowRequest.name,
+		// 			move: "SideShow",
+		// 			playerseat: playerSeat,
+		// 			amount: 0,
+		// 		},
+		// 	})
+		// 	.then((res) => {
+		// 		console.log("update data", res.data);
+		// 		console.log("message", res.data.Message);
+		// 		setIsReqPlayer(false);
+		// 		setReqPlayerName("-");
+		// 		setShowSideShowRequestSentPopup(false);
+		// 		setSideShowResult(res.data.Message);
+		// 		setShowSideShowResult(true);
+
+		// 		setTimeout(() => {
+		// 			setShowSideShowResult(false);
+		// 		}, 3000);
+
+		// 		socket.emit("sideshow_result", {
+		// 			roomId,
+		// 			message: res.data.Message,
+		// 		});
+
+		// 		socket.emit("update_move", {
+		// 			roomId,
+		// 			message: res.data.Message,
+		// 			move: "SideShow",
+		// 		});
+
+		// 		getRoundDetails("called from handle sideshow");
+		// 	})
+		// 	.catch((err) => {
+		// 		console.log("errors", err);
+		// 	});
 	};
 
 	const denySideShow = () => {
@@ -683,6 +906,7 @@ const Game = ({ socket }) => {
 								name={name}
 								roomId={roomId}
 								setShowRedirectHomeMessage={setShowRedirectHomeMessage}
+								handleClearInterval={handleClearInterval}
 								handleMove={handleMove}
 								sideShowRequest={sideShowRequest}
 								setShowRedirectHome={setShowRedirectHome}
@@ -695,6 +919,7 @@ const Game = ({ socket }) => {
 								setShowOptionMenu={setShowOptionMenu}
 								playerAway={playerAway}
 								setPlayerAway={setPlayerAway}
+								setPlayerLeft={setPlayerLeft}
 							/>
 
 							<div className="relative h-full md:mt-16">
@@ -712,7 +937,6 @@ const Game = ({ socket }) => {
 											<Seat
 												key={i}
 												name={name}
-												isPlayerTurn={isPlayerTurn}
 												stack={stack}
 												roundDetails={roundDetails}
 												seatNum={i + 1}
@@ -815,17 +1039,26 @@ const Game = ({ socket }) => {
 								</div>
 							)}
 
-							{hasGameStarted && isPlayerTurn && (
-								<div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[7rem] bg-[#333232] text-white/80 p-2 w-16 md:w-56 text-center md:px-8 md:text-lg rounded-lg">
-									<h2> Time Remaining </h2>
+							{hasGameStarted && (
+								<div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[7rem] bg-[#333232] text-white/80 p-2 w-16 md:w-40 text-center md:px-8 md:text-lg rounded-lg">
+									<h2> {currentPlayerName} </h2>
 
 									<p className="text-center w-full">
 										{" "}
 										{playerDate &&
 											!showPlayerWonPopup &&
-											30 -
-												Math.trunc((date.getTime() - playerDate) / 1000)}{" "}
+											Math.trunc((date.getTime() - playerDate) / 1000)}{" "}
 									</p>
+
+									{/* {roundDetails.current_player_seatnum == playerSeat ? 
+                            // <p className={`text-center w-full ${timeRemaining < 10 ? "text-red-600 text-bold" : "" }`} >{timeRemaining}</p>
+                                <p className="text-center w-full" > {Math.trunc((date.getTime() - playerDate()) / 1000) } </p>
+                            :
+                            // <p className={`text-center w-full ${otherTimeRemaining < 10 ? "text-red-600 text-bold" : "" }`} > {"other " + otherTimeRemaining}</p>
+                            <p className="text-center w-full" > {Math.trunc((date.getTime() - otherPlayerTime) / 1000) } </p>
+                            } */}
+
+									{/* <p className={`text-center w-full`} >{timeRemaining}</p> */}
 								</div>
 							)}
 
@@ -946,8 +1179,10 @@ const Game = ({ socket }) => {
 
 					{hasGameStarted &&
 						!showRaiseSlider &&
-						playerIndex != -1 &&
-						roundDetails.currentPlayerCardSeen[playerIndex] == "No" && (
+						!(
+							playerIndex != -1 &&
+							roundDetails.currentPlayerCardSeen[playerIndex] == "Yes"
+						) && (
 							<button
 								onClick={(e) => handleMove("SeeCards")}
 								className={`game-btn absolute -translate-y-full right-2 md:right-8 md:bottom-16 p-1 md:p-4`}

@@ -12,7 +12,6 @@ import io from 'socket.io-client';
 import StartScreen from "./StartScreen";
 import Game from "./Game/Game";
 
-
 function App() {
 
   const [name, setName] = useState("")
@@ -21,8 +20,8 @@ function App() {
   const [showLoading, setShowLoading] = useState(false)
   const navigate = useNavigate()
 
-  const [socket, setSocket] = useState(io("https://teenpatti.website/", {cors: {
-      origin: "https://teenpatti.website/",
+  const [socket, setSocket] = useState(io("http://localhost:8080/", {cors: {
+      origin: "http://localhost:8080/",
       methods: ["GET", "POST"],
       transports: ['websocket', 'polling'],
       credentials: true

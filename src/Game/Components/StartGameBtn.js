@@ -77,7 +77,7 @@ const StartGameBtn = ({roomId, setHasGameStarted, getMembers, setPlayerDate, set
                 console.log(data);
                 setHasGameStarted(true)
                 console.log("called from game start btn");
-                getRoundDetails("called from game start btn")
+                getRoundDetails()
                 setCookie("hasGameStarted", true, { path: '/' })
                 console.log("game has started from start btn");
                 setShowLoader(false)
