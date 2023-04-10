@@ -21,7 +21,7 @@ function App() {
   const navigate = useNavigate()
 
   const [socket, setSocket] = useState(io("https://156.67.218.200:8080/", {cors: {
-      origin: "http://localhost:8080/",
+      origin: "https://156.67.218.200:8080/",
       methods: ["GET", "POST"],
       transports: ['websocket', 'polling'],
       credentials: true
