@@ -187,7 +187,9 @@ ls_color = []
 ls_duo = []
 ls_others = []
 
-def check_winner(ls_names1, ls_cards1):   
+def check_winner(ls_names1, ls_cards1):
+    print("CHECKING WINNER")
+    print(ls_names1, ls_cards1)   
     num_players = len(ls_names1)
     for i in range(num_players):
         current_cards = ls_cards1[i]
@@ -213,16 +215,22 @@ def check_winner(ls_names1, ls_cards1):
     ls_duo.sort(key = lambda x: x[1])
     ls_others.sort(key = lambda x: x[1])
     
-    
+    print("winning seq",ls_cards1)
     if(len(ls_trio) != 0):
+        print("trio")
         return(ls_names1[ls_cards1.index(ls_trio[0][0])],"Trio")
     elif(len(lss_pure_seq)!= 0):
+        print("pure")
         return(ls_names1[ls_cards1.index(lss_pure_seq[0][0])],"Pure Sequence")
     elif(len(lss_seq) != 0):
+        print("seq")
         return(ls_names1[ls_cards1.index(lss_seq[0][0])], "Sequence")
     elif(len(ls_color) != 0):
+        print("color")
         return(ls_names1[ls_cards1.index(ls_color[0][0])], "Color")
     elif(len(ls_duo) != 0):
+        print("duo")
         return(ls_names1[ls_cards1.index(ls_duo[0][0])], "Duo")
     else:
+        print("highest card")
         return(ls_names1[ls_cards1.index(ls_others[0][0])], "Highest Card")    

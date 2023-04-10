@@ -476,9 +476,11 @@ def getRoundInfo(sid, data):
 
 @sio.on("updateMove")
 async def updateMove(sid, data):
+    print("data update move", data)
     roomId, name, move = data["roomId"], data["name"], data["move"]
     amount = data["amount"]
-    playerseat = -22
+    playerseat = data["playerseat"] if "playerseat" in data else -22
+    print(playerseat)
     print("update move called")
     room_index = None
 
@@ -526,9 +528,15 @@ async def updateMove(sid, data):
     ## Checking for full show possibility
     if(full_show == False):
         if(len(current_player_rotation) == 2):
-            roundDetails[room_index]["fullShowPossible"] = True  
+            full_show = True
+            for player_seat in current_player_rotation:
+                player_index = players_seat_num.index(player_seat)
+                if players_card_seen[player_index] == 'No':
+                    full_show = False
+                    break
+            roundDetails[room_index]["fullShowPossible"] = full_show  
             roundDetails[room_index]["sideShowPossible"] = False
-            full_show = True  
+              
 
     ## Will Contain the code for all the moves played by the current user
     if(move == "SeeCards"):
@@ -541,14 +549,14 @@ async def updateMove(sid, data):
         print("before2",roundDetails)
         # current_player_pack = roundDetails[room_index]["currentPlayerPack"]
         if(side_show == False):
-            c = 1
+            c = 0
             print("before3",roundDetails)
             print(current_player_pack, players_card_seen)
             for i in range(len(players_card_seen)):
                 if(current_player_pack[i] == "No" and players_card_seen[i] == "Yes"):
                     c+=1          
             print("card seen",c, len(current_player_rotation))
-            if(c >= len(current_player_rotation)):
+            if(len(current_player_rotation) > 2 and c >= len(current_player_rotation)):
                 roundDetails[room_index]['sideShowPossible'] = True  
         
         await sio.emit("player_update_move", {
@@ -596,10 +604,11 @@ async def updateMove(sid, data):
             return({"Status":"Success", "Message": f"{winner} is the winner"})
 
         elif(current_player == player_names[index] and len(current_player_rotation)>1):
+            print("inside pack same")
             roundDetails[room_index]["current_player_seatnum"] = current_player_rotation[1]
+            index1 = players_seat_num.index(current_player_rotation[1])
             roundDetails[room_index]["currentPlayerRotation"].remove(current_player_seat_num)
             roundDetails[room_index]["currentPlayerPack"][index] = "Yes"
-            index1 = players_seat_num.index(current_player_rotation[1])
             roundDetails[room_index]["current_player"] = player_names[index1]
             await sio.emit("player_update_move", {
                 "roomId" : roomId,
@@ -609,8 +618,10 @@ async def updateMove(sid, data):
             return({"Status":"Success", "Message": f"{current_player} has been packed"})
         elif(current_player != player_names[index] and len(current_player_rotation)>1):
             # index1 = players_seat_num[player_names.index(name)]
+            print("inside pack same")
             roundDetails[room_index]["currentPlayerRotation"].remove(players_seat_num[player_names.index(name)])
             roundDetails[room_index]["currentPlayerPack"][player_names.index(name)] = "Yes"
+            
             await sio.emit("player_update_move", {
                 "roomId" : roomId,
                 "message": f"{player_names[room_index]} has been packed",
@@ -620,7 +631,13 @@ async def updateMove(sid, data):
         
 
         if(len(current_player_rotation)-1 == 2):
-            roundDetails[room_index]["fullShowPossible"] = True
+            full_show = True
+            for player_seat in current_player_rotation:
+                player_index = players_seat_num.index(player_seat)
+                if players_card_seen[player_index] == 'No':
+                    full_show = False
+                    break
+            roundDetails[room_index]["fullShowPossible"] = full_show 
 
     elif(move == "Check" and current_player == name):
         if((float(players_stack[index]) - 2*float(current_board) < 0 and players_card_seen[index] == "Yes") or (float(players_stack[index]) - float(current_board) < 0 and players_card_seen[index] == "No") ):
@@ -742,13 +759,14 @@ async def updateMove(sid, data):
             return({"Status":"Failure", "Message": "Side Show is not available at the moment"})
         else:
             temp = current_player_rotation.copy()
-            # print(temp)
+            print("IN SIDE SHOW")
+            print(temp)
             temp.reverse()
-            # print(temp)
+            print(temp)
             temp.pop()
-            # print(temp)
+            print(temp)
             playerseat = int(playerseat)
-            # print(type(playerseat), type(temp[0]), playerseat, temp)
+            print(type(playerseat), type(temp[0]), playerseat, temp)
             if(len(temp) ==1):
                 await sio.emit("player_update_move", {
                 "roomId" : roomId,
@@ -772,6 +790,7 @@ async def updateMove(sid, data):
                     myindex = players_seat_num.index(current_player_seat_num)
                     opponentindex = players_seat_num.index(playerseat)
                     winner  = check_winner([player_names[myindex], player_names[opponentindex] ], [player_cards[myindex],player_cards[opponentindex]])
+                    print("winner", winner)
                     if(winner[0] == player_names[myindex]):
                         roundDetails[room_index]["currentPlayerRotation"].remove(players_seat_num[opponentindex])
                         roundDetails[room_index]["currentPlayerPack"][opponentindex] = "Yes"
@@ -780,7 +799,7 @@ async def updateMove(sid, data):
                             "message": f"{player_names[opponentindex]} has been packed",
                             "move": move
                             }, room=roomId)
-                        return({"Status":"Success", "Message": f"{player_names[opponentindex]} has been packed"})
+                        return({"Status":"Success", "Message": f"{player_names[opponentindex]} has been packed, {current_player} has won the side show"})
                     elif(winner[0] == player_names[opponentindex]):
                         roundDetails[room_index]["current_player_seatnum"] = current_player_rotation[1]
                         roundDetails[room_index]["currentPlayerRotation"].remove(current_player_seat_num)
@@ -817,6 +836,7 @@ async def updateMove(sid, data):
                             opponent_index = players_seat_num.index(current_player_rotation[i])
                     opponent_cards = player_cards[opponent_index]
                     winner  = check_winner([player_names[index], player_names[opponent_index] ], [my_cards,opponent_cards])
+                    print("winner", winner)
                     if(winner[0] == player_names[index]):
                         roundDetails[room_index]["currentPlayerStack"][index] = float(players_stack[index]) + float(current_pot)+ float(current_board)*2
                         roundDetails[room_index]["currentPot"] = 0
@@ -876,6 +896,8 @@ async def updateMove(sid, data):
                             opponent_index = players_seat_num.index(current_player_rotation[i])
                     opponent_cards = player_cards[opponent_index]
                     winner  = check_winner([player_names[index], player_names[opponent_index] ], [my_cards,opponent_cards])
+                    print("winner", winner)
+                    
                     if(winner[0] == player_names[index]):
                         roundDetails[room_index]["currentPlayerStack"][index] = float(players_stack[index]) + float(current_pot)+ float(current_board)
                         roundDetails[room_index]["currentPot"] = 0
@@ -1097,10 +1119,24 @@ async def start_timer(sid, data):
 
 
 @sio.on("stop_timer")
-async def start_timer(sid, data):
+async def stop_timer(sid, data):
     print("stop timer req received")
     await sio.emit("player_stop_timer", data, room=data['roomId'])
     return data
+
+@sio.on("side_show_request")
+async def side_show_request(sid, data):
+    print("side show req rec", data)
+    room = data["roomId"]
+    await sio.emit("player_side_show_request", data, room=room)
+    return data 
+
+@sio.on("sideshow_result")
+async def side_show_request(sid, data):
+    print("side show result", data)
+    room = data["roomId"]
+    await sio.emit("player_sideshow_result", data, room=room)
+    return data 
     
 # API endpoint : transferOwnerShip :: This api trasnfer ownership of the game to the player mentioned
 
@@ -1113,6 +1149,6 @@ app.router.add_get('/', index)
 ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
 ssl_context.load_cert_chain('domain_srv.crt', 'domain_srv.key')
 
-## We kick off our server
+## We kick off our server ssl_context=ssl_context
 if __name__ == '__main__':
-    web.run_app(app, ssl_context=ssl_context, port=8080)
+    web.run_app(app, port=8080)
